@@ -1,6 +1,8 @@
 import type { Category, Level, Word } from './types'
 import { generalWords } from './generalWords'
 import { industryWords } from './industryWords'
+import { moreGeneralWords } from './moreGeneralWords'
+import { moreIndustryWords } from './moreIndustryWords'
 export type { Category, Level, Word } from './types'
 
 export type LevelFilter = 'recommended' | 'all' | Level
@@ -60,8 +62,8 @@ const foundationWords: Omit<Word, 'level'>[] = [
   { id: 'ticket', uk: 'Квиток', pronunciation: 'kvy-tók', zh: '票；车票', category: 'travel', part: '阳性名词', example: 'Один квиток, будь ласка.', translation: '请给我一张票。' },
   { id: 'train', uk: 'Потяг', pronunciation: 'pó-tiah', zh: '火车', category: 'travel', part: '阳性名词', example: 'Це мій потяг.', translation: '这是我要乘的火车。' },
   { id: 'hotel', uk: 'Готель', pronunciation: 'ho-télʹ', zh: '酒店', category: 'travel', part: '阳性名词', example: 'Де мій готель?', translation: '我的酒店在哪里？' },
-  { id: 'left', uk: 'Ліворуч', pronunciation: 'lí-vo-ruch', zh: '向左；在左边', category: 'travel', part: '副词', example: 'Метро ліворуч.', translation: '地铁在左边。' },
-  { id: 'right', uk: 'Праворуч', pronunciation: 'prá-vo-ruch', zh: '向右；在右边', category: 'travel', part: '副词', example: 'Готель праворуч.', translation: '酒店在右边。' },
+  { id: 'left', uk: 'Ліворуч', pronunciation: 'li-vó-ruch', zh: '向左；在左边', category: 'travel', part: '副词', example: 'Метро ліворуч.', translation: '地铁在左边。' },
+  { id: 'right', uk: 'Праворуч', pronunciation: 'pra-vó-ruch', zh: '向右；在右边', category: 'travel', part: '副词', example: 'Готель праворуч.', translation: '酒店在右边。' },
   { id: 'sun', uk: 'Сонце', pronunciation: 'són-tse', zh: '太阳', category: 'nature', part: '中性名词', example: 'Сьогодні світить сонце.', translation: '今天阳光明媚。' },
   { id: 'sky', uk: 'Небо', pronunciation: 'né-bo', zh: '天空', category: 'nature', part: '中性名词', example: 'Небо блакитне.', translation: '天空是浅蓝色的。' },
   { id: 'flower', uk: 'Квітка', pronunciation: 'kvít-ka', zh: '花', category: 'nature', part: '阴性名词', example: 'Яка гарна квітка!', translation: '多么美丽的花！' },
@@ -83,6 +85,8 @@ const foundationWords: Omit<Word, 'level'>[] = [
 // Retain the original IDs so existing bookmarks and learning records remain valid.
 export const words: Word[] = [
   ...generalWords,
+  ...moreGeneralWords,
   ...industryWords,
+  ...moreIndustryWords,
   ...foundationWords.map(word => ({ ...word, level: 'A1' as const })),
 ]

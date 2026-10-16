@@ -28,7 +28,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Type-check and build
-        run: npm run build
+        # Validate IDs before publishing so bookmarks never point at duplicate cards.
+        # The check also catches missing translations and invalid topic/level pairs.
+        run: npm run check:vocabulary && npm run build
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload site
