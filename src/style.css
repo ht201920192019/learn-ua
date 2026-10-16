@@ -24,3 +24,59 @@
   .daily-goal>p{font-size:10px;min-height:0;margin-bottom:0}
   .tip-panel{display:none}
 }
+
+.level-filter-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:23px 0 0}
+.level-filter{display:flex;align-items:center;gap:10px;color:#7c899e;font-size:11px}
+.level-select{display:flex;position:relative;align-items:center}
+.level-select select{font:inherit;font-size:11px;appearance:none;border:1px solid #e2e8f4;border-radius:6px;padding:8px 31px 8px 11px;background:#f8faff;color:#526ea5;cursor:pointer;max-width:100%}
+.level-select select:focus-visible{outline:3px solid #b5c8ff;outline-offset:2px}
+.level-select>svg{position:absolute;right:10px;pointer-events:none;color:#8293b4}
+.level-note{font-size:10px;color:#98a2b3;letter-spacing:.2px}
+.categories{margin-top:16px}
+.categories>.industry-category:not(.selected){color:#7b8d79;background:#f8faf6}
+.categories>.industry-category.selected{background:#eef4ed;border-color:#dbe7d8;color:#657f62}
+.categories>.industry-category.selected>span{background:#dfeadb;color:#708a69}
+.card-toolbar .card-tags{gap:7px}
+.level-badge{border:1px solid #e3e9fb;background:#f3f6ff;border-radius:4px;padding:3px 6px;font-size:9px;color:#7b92c6}
+.level-badge.industry-level{color:#a28b59;background:#fcf8ec;border-color:#f2ead5}
+.flashcard{height:auto;min-height:410px}
+.card-content{min-height:237px;padding-top:22px;padding-bottom:14px}
+.word-front,.word-back{width:100%;min-width:0;max-width:100%}
+.word-front h2{overflow-wrap:anywhere;line-height:1.35}
+.word-front h2.long-word{font-size:42px;letter-spacing:-.7px}
+.word-front h2.medium-word{font-size:33px;letter-spacing:-.5px}
+.word-front h2.phrase-word{font-size:28px;letter-spacing:-.3px}
+.pronunciation{line-height:1.8;overflow-wrap:anywhere;font-size:13px;letter-spacing:.5px}
+.term-abbreviation{display:inline-block;margin-top:11px;padding:3px 8px;border:1px solid #e5eaf4;border-radius:5px;font-size:10px;letter-spacing:.8px;color:#6e83a7;background:#f8faff}
+.word-back .card-eyebrow{display:block;line-height:1.7;letter-spacing:.25px;overflow-wrap:anywhere}
+.word-back h2{font-size:29px;line-height:1.5;letter-spacing:1px}
+.word-back .part-of-speech{display:inline-block;line-height:1.7}
+.example{margin-top:16px}.example>p{line-height:1.8}.example>span{display:block;line-height:1.9}
+.term-note{font-size:10px;line-height:1.85;color:#8391ab;background:#edf2fb;border:1px solid #e5ebf6;border-radius:6px;text-align:left;padding:8px 10px;margin:13px auto 0;max-width:490px}
+
+@media(max-width:760px){
+  .level-note{display:none}.level-filter-row{margin-top:18px}
+  .card-content{min-height:240px}
+  .word-front h2.long-word{font-size:36px}
+  .word-front h2.medium-word{font-size:29px}
+  .word-front h2.phrase-word{font-size:25px}
+}
+@media(max-width:480px){
+  .level-filter-row{margin-top:16px}.level-filter{font-size:10px;gap:9px}
+  .level-select select{font-size:10px;padding-top:7px;padding-bottom:7px}
+  .categories{margin-top:14px}
+  .flashcard{min-height:385px}
+  .card-toolbar .card-tags{gap:5px}.card-toolbar>div{gap:7px}
+  .level-badge{font-size:8px;padding:3px 5px}
+  .card-content{padding:18px 20px 12px;min-height:231px}
+  .word-front h2{font-size:48px}
+  .word-front h2.long-word{font-size:27px;letter-spacing:-.4px}
+  .word-front h2.medium-word{font-size:24px;letter-spacing:-.2px}
+  .word-front h2.phrase-word{font-size:21px;letter-spacing:0}
+  .pronunciation{font-size:11px;letter-spacing:0;line-height:1.9}
+  .word-back .card-eyebrow{font-size:12px;line-height:1.65}
+  .word-back h2{font-size:23px;margin:10px 0 8px;letter-spacing:.5px}
+  .word-back .part-of-speech{font-size:9px;max-width:100%}
+  .example>p{font-size:13px;line-height:1.8}.example>span{font-size:11px;line-height:1.9}
+  .term-note{font-size:10px;line-height:1.8;padding:8px;margin-top:12px}
+}

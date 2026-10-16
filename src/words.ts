@@ -1,16 +1,35 @@
-export type Category = 'greetings' | 'daily' | 'food' | 'travel' | 'nature' | 'numbers'
-export type Word = { id: string; uk: string; pronunciation: string; zh: string; category: Category; part: string; example: string; translation: string }
+import type { Category, Level, Word } from './types'
+import { generalWords } from './generalWords'
+import { industryWords } from './industryWords'
+export type { Category, Level, Word } from './types'
+
+export type LevelFilter = 'recommended' | 'all' | Level
+export const levelOptions: { id: LevelFilter; name: string }[] = [
+  { id: 'recommended', name: 'A2–B1 + 行业词汇' },
+  { id: 'A2', name: 'A2 · 日常应用' },
+  { id: 'B1', name: 'B1 · 交流表达' },
+  { id: '行业', name: '储能 / 能源行业' },
+  { id: 'A1', name: 'A1 · 基础复习' },
+  { id: 'all', name: '全部难度' },
+]
+export function matchesLevel(word: Word, level: LevelFilter) {
+  return level === 'all' || (level === 'recommended' ? word.level !== 'A1' : word.level === level)
+}
 export const categories: { id: 'all' | Category; name: string; label: string }[] = [
   { id: 'all', name: '全部词汇', label: 'УСІ СЛОВА' },
+  { id: 'daily', name: '生活交流', label: 'ЩОДЕННЕ ЖИТТЯ' },
+  { id: 'storage', name: '储能系统', label: 'НАКОПИЧЕННЯ ЕНЕРГІЇ' },
+  { id: 'energy', name: '能源行业', label: 'ЕНЕРГЕТИКА' },
+  { id: 'work', name: '工作职场', label: 'РОБОТА' },
+  { id: 'travel', name: '旅行事务', label: 'ПОДОРОЖІ' },
+  { id: 'society', name: '社会表达', label: 'СУСПІЛЬСТВО' },
   { id: 'greetings', name: '日常问候', label: 'ПРИВІТАННЯ' },
-  { id: 'daily', name: '日常生活', label: 'ЩОДЕННЕ ЖИТТЯ' },
   { id: 'food', name: '美食饮品', label: 'ЇЖА ТА НАПОЇ' },
-  { id: 'travel', name: '旅行出行', label: 'ПОДОРОЖІ' },
   { id: 'nature', name: '自然万物', label: 'ПРИРОДА' },
   { id: 'numbers', name: '数字颜色', label: 'ЧИСЛА ТА КОЛЬОРИ' },
 ]
 // The accent marks in transliterations indicate stress; standard Ukrainian spelling is kept on cards.
-export const words: Word[] = [
+const foundationWords: Omit<Word, 'level'>[] = [
   { id: 'hello', uk: 'Привіт', pronunciation: 'pry-vít', zh: '你好；嗨', category: 'greetings', part: '感叹词', example: 'Привіт! Як справи?', translation: '你好！最近怎么样？' },
   { id: 'thanks', uk: 'Дякую', pronunciation: 'diá-ku-yu', zh: '谢谢', category: 'greetings', part: '礼貌用语', example: 'Дякую за допомогу!', translation: '谢谢你的帮助！' },
   { id: 'please', uk: 'Будь ласка', pronunciation: 'budʹ lás-ka', zh: '请；不客气', category: 'greetings', part: '礼貌用语', example: 'Чай, будь ласка.', translation: '请给我茶。' },
@@ -59,4 +78,11 @@ export const words: Word[] = [
   { id: 'yellow', uk: 'Жовтий', pronunciation: 'zhóv-tyi', zh: '黄色的（阳性）', category: 'numbers', part: '形容词', example: 'Жовтий соняшник.', translation: '黄色的向日葵。' },
   { id: 'white', uk: 'Білий', pronunciation: 'bí-lyi', zh: '白色的（阳性）', category: 'numbers', part: '形容词', example: 'Білий сніг.', translation: '白色的雪。' },
   { id: 'green', uk: 'Зелений', pronunciation: 'ze-lé-nyi', zh: '绿色的（阳性）', category: 'numbers', part: '形容词', example: 'Зелений чай.', translation: '绿茶。' },
+]
+
+// Retain the original IDs so existing bookmarks and learning records remain valid.
+export const words: Word[] = [
+  ...generalWords,
+  ...industryWords,
+  ...foundationWords.map(word => ({ ...word, level: 'A1' as const })),
 ]

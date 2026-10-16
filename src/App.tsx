@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, BookOpen, Bookmark, Check, CheckCheck, ChevronLeft, ChevronRight, CircleHelp, Flame, Headphones, Heart, Keyboard, Layers, RotateCcw, Search, Shuffle, Sparkles, Sprout, Volume2, X } from 'lucide-react'
-import { categories, words } from './words'
-import type { Category } from './words'
+import { ArrowLeft, ArrowRight, BookOpen, Bookmark, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Flame, Headphones, Heart, Keyboard, Layers, RotateCcw, Search, Shuffle, Sparkles, Sprout, Volume2, X } from 'lucide-react'
+import { categories, levelOptions, matchesLevel, words } from './words'
+import type { Category, LevelFilter } from './words'
 
 type Mode = 'all' | 'saved' | 'review'
 type Progress = { known: string[]; review: string[]; saved: string[]; daily: { date: string; ids: string[] }; days: string[] }
@@ -21,6 +21,7 @@ function loadProgress(): Progress {
 function App() {
   const [progress, setProgress] = useState(loadProgress)
   const [category, setCategory] = useState<'all' | Category>('all')
+  const [level, setLevel] = useState<LevelFilter>('recommended')
   const [mode, setMode] = useState<Mode>('all')
   const [query, setQuery] = useState('')
   const [index, setIndex] = useState(0)
@@ -33,11 +34,14 @@ function App() {
   const helpRef = useRef<HTMLDialogElement>(null)
   const helpTriggerRef = useRef<HTMLButtonElement>(null)
   const roundReviewed = useRef(new Set<string>())
+  const levelWords = useMemo(() => words.filter(word => matchesLevel(word, level)), [level])
+  const availableCategories = categories.filter(c => c.id === 'all' || levelWords.some(word => word.category === c.id))
   const filtered = useMemo(() => order.map(id => words.find(w => w.id === id)!).filter(word =>
+    matchesLevel(word, level) &&
     (category === 'all' || word.category === category) &&
     (mode === 'all' || (mode === 'saved' ? progress.saved : progress.review).includes(word.id)) &&
-    `${word.uk} ${word.zh} ${word.pronunciation}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
-  ), [category, mode, query, order, progress.saved, progress.review])
+    `${word.uk} ${word.zh} ${word.pronunciation} ${word.abbreviation ?? ''}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()),
+  ), [level, category, mode, query, order, progress.saved, progress.review])
   const currentIndex = filtered.length ? Math.min(index, filtered.length - 1) : 0
   const word = filtered[currentIndex]
   const learnedInGroup = filtered.filter(w => progress.known.includes(w.id)).length
@@ -58,7 +62,7 @@ function App() {
     if ('speechSynthesis' in window) window.speechSynthesis.cancel()
     setSpeaking(false)
   }, [word?.id])
-  useEffect(() => { roundReviewed.current.clear() }, [category, mode, query, order])
+  useEffect(() => { roundReviewed.current.clear() }, [level, category, mode, query, order])
   useEffect(() => { if ('speechSynthesis' in window) window.speechSynthesis.getVoices() }, [])
 
   const navigate = useCallback((direction: number) => {
@@ -129,14 +133,22 @@ function App() {
     return () => window.removeEventListener('keydown', handleKey)
   }, [helpOpen, word, celebrated, navigate, mark, speak])
 
-  function selectMode(next: Mode) { setMode(next); setIndex(0); setFlipped(false); setCelebrated(false) }
+  function selectMode(next: Mode) {
+    setMode(next); setIndex(0); setFlipped(false); setCelebrated(false)
+    if (next === 'saved' || next === 'review') { setLevel('all'); setCategory('all'); setQuery('') }
+    else if (mode !== 'all') { setLevel('recommended'); setCategory('all'); setQuery('') }
+  }
+  function selectLevel(next: LevelFilter) {
+    setLevel(next); setIndex(0); setFlipped(false); setCelebrated(false)
+    if (!words.some(word => matchesLevel(word, next) && word.category === category)) setCategory('all')
+  }
   function selectCategory(next: 'all' | Category) { setCategory(next); setIndex(0); setFlipped(false); setCelebrated(false) }
   function shuffle() {
     const next = [...order]
     for (let i = next.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [next[i], next[j]] = [next[j], next[i]] }
     setOrder(next); setIndex(0); setFlipped(false); setCelebrated(false); setToast('已打乱顺序，给记忆一点新鲜感')
   }
-  function resetFilters() { setMode('all'); setCategory('all'); setQuery(''); setIndex(0); setFlipped(false); setCelebrated(false) }
+  function resetFilters() { setMode('all'); setLevel('recommended'); setCategory('all'); setQuery(''); setIndex(0); setFlipped(false); setCelebrated(false) }
 
   return <>
     <header className="site-header">
@@ -152,23 +164,24 @@ function App() {
 
     <main>
       <section className="intro">
-        <div><div className="eyebrow"><span />МАЛЕНЬКІ КРОКИ, ВЕЛИКІ ЗМІНИ</div><h1>每一张闪卡，都是<span>一点进步。</span></h1><p>从一个新单词开始，慢慢走进乌克兰语的世界。</p></div>
+        <div><div className="eyebrow"><span />МАЛЕНЬКІ КРОКИ, ВЕЛИКІ ЗМІНИ</div><h1>每一张闪卡，都是<span>一点进步。</span></h1><p>A2–B1 日常交流，遇见储能与能源行业的专业表达。</p></div>
         <div className="intro-note"><Sunflower /><div><span>不急，慢慢来。</span><p>Ти все зможеш! <span>你一定可以。</span></p></div></div>
       </section>
 
       <section className="workspace" aria-label="词汇学习">
-        <div className="workspace-top"><div className="section-title"><span className="tiny-card"><Layers size={17} /></span><h2>{mode === 'saved' ? '我的收藏' : mode === 'review' ? '待复习词汇' : '你的词汇卡片'}</h2><span className="word-count">{filtered.length} 个单词</span></div><label className="search-field"><Search size={17} /><input value={query} onChange={e => { setQuery(e.target.value); setIndex(0); setFlipped(false); setCelebrated(false) }} placeholder="搜索乌克兰语或中文" aria-label="搜索词汇" />{query && <button aria-label="清除搜索" onClick={() => { setQuery(''); setIndex(0); setFlipped(false) }}><X size={15} /></button>}</label></div>
-        <div className="categories" aria-label="词汇分类">{categories.map(c => <button key={c.id} className={category === c.id ? 'selected' : ''} aria-pressed={category === c.id} onClick={() => selectCategory(c.id)}>{c.name}{category === c.id && <span>{c.id === 'all' ? words.length : words.filter(w => w.category === c.id).length}</span>}</button>)}</div>
+        <div className="workspace-top"><div className="section-title"><span className="tiny-card"><Layers size={17} /></span><h2>{mode === 'saved' ? '我的收藏' : mode === 'review' ? '待复习词汇' : '你的词汇卡片'}</h2><span className="word-count">{filtered.length} 个单词</span></div><label className="search-field"><Search size={17} /><input value={query} onChange={e => { setQuery(e.target.value); setIndex(0); setFlipped(false); setCelebrated(false) }} placeholder="搜索乌克兰语或中文" aria-label="搜索词汇" />{query && <button aria-label="清除搜索" onClick={() => { setQuery(''); setIndex(0); setFlipped(false); setCelebrated(false) }}><X size={15} /></button>}</label></div>
+        <div className="level-filter-row"><label className="level-filter"><span>学习范围</span><span className="level-select"><select aria-label="学习难度" value={level} onChange={e => selectLevel(e.target.value as LevelFilter)}>{levelOptions.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}</select><ChevronDown size={14} /></span></label><span className="level-note">日常词按难度分组 · 行业词单独标注</span></div>
+        <div className="categories" aria-label="词汇分类">{availableCategories.map(c => <button key={c.id} className={`${category === c.id ? 'selected' : ''} ${c.id === 'storage' || c.id === 'energy' ? 'industry-category' : ''}`} aria-pressed={category === c.id} onClick={() => selectCategory(c.id)}>{c.name}{category === c.id && <span>{c.id === 'all' ? levelWords.length : levelWords.filter(w => w.category === c.id).length}</span>}</button>)}</div>
 
         <div className="study-layout">
           <div className="study-main">
-            <div className="deck-meta"><span><span className="live-dot" />{mode === 'saved' ? '收藏词库' : mode === 'review' ? '巩固记忆' : '基础词汇'}<span className="meta-divider">/</span>A1 入门</span><button className="text-button" onClick={shuffle} disabled={!word}><Shuffle size={14} />随机顺序</button></div>
+            <div className="deck-meta"><span><span className="live-dot" />{mode === 'saved' ? '收藏词库' : mode === 'review' ? '巩固记忆' : '实用词汇'}<span className="meta-divider">/</span>{word ? (word.level === '行业' ? '行业术语' : `${word.level} ${word.level === 'A1' ? '基础复习' : word.level === 'A2' ? '日常应用' : '交流表达'}`) : levelOptions.find(option => option.id === level)?.name}</span><button className="text-button" onClick={shuffle} disabled={!word}><Shuffle size={14} />随机顺序</button></div>
             <div className="card-stack">
               <div className="stack-sheet stack-one" /><div className="stack-sheet stack-two" />
               {celebrated ? <div className="flashcard completion"><span className="completion-icon"><Sparkles size={33} /></span><span className="card-eyebrow">ЧУДОВА РОБОТА!</span><h2>这一组，学习完成！</h2><p>每一次遇见，都会让记忆更深一点。</p><button className="primary-button" onClick={() => { roundReviewed.current.clear(); setCelebrated(false); setIndex(0); setFlipped(false) }}><RotateCcw size={17} />再学一遍</button></div> : word ? <div className={`flashcard ${flipped ? 'flipped' : ''}`} key={word.id}>
-                <div className="card-toolbar"><span className="category-badge"><span />{categories.find(c => c.id === word.category)?.name}</span><div><span className="card-number">{String(currentIndex + 1).padStart(2, '0')}<span> / {String(filtered.length).padStart(2, '0')}</span></span><button className={`bookmark-button icon-button ${saved ? 'is-saved' : ''}`} onClick={toggleSaved} aria-label={saved ? '取消收藏' : '收藏单词'} aria-pressed={saved}><Bookmark size={20} fill={saved ? 'currentColor' : 'none'} /></button></div></div>
+                <div className="card-toolbar"><div className="card-tags"><span className="category-badge"><span />{categories.find(c => c.id === word.category)?.name}</span><span className={`level-badge ${word.level === '行业' ? 'industry-level' : ''}`}>{word.level}</span></div><div><span className="card-number">{String(currentIndex + 1).padStart(2, '0')}<span> / {String(filtered.length).padStart(2, '0')}</span></span><button className={`bookmark-button icon-button ${saved ? 'is-saved' : ''}`} onClick={toggleSaved} aria-label={saved ? '取消收藏' : '收藏单词'} aria-pressed={saved}><Bookmark size={20} fill={saved ? 'currentColor' : 'none'} /></button></div></div>
                 <button className="card-content" onClick={() => setFlipped(v => !v)} aria-label={flipped ? '翻回乌克兰语' : '翻卡查看中文释义'}>
-                  {flipped ? <div className="word-back"><span className="card-eyebrow">{word.uk}</span><h2>{word.zh}</h2><span className="part-of-speech">{word.part}</span><div className="example"><p lang="uk">{word.example}</p><span>{word.translation}</span></div></div> : <div className="word-front"><span className="card-eyebrow">УКРАЇНСЬКА · 乌克兰语</span><h2 lang="uk" className={word.uk.length > 11 ? 'long-word' : ''}>{word.uk}</h2><p className="pronunciation">[ {word.pronunciation} ]</p></div>}
+                  {flipped ? <div className="word-back"><span className="card-eyebrow" lang="uk">{word.uk}</span><h2>{word.zh}</h2><span className="part-of-speech">{word.part}{word.abbreviation && ` · ${word.abbreviation}`}</span><div className="example"><p lang="uk">{word.example}</p><span>{word.translation}</span></div>{word.note && <p className="term-note">{word.note}</p>}</div> : <div className="word-front"><span className="card-eyebrow">УКРАЇНСЬКА · 乌克兰语</span><h2 lang="uk" className={word.uk.length > 30 ? 'phrase-word' : word.uk.length > 18 ? 'medium-word' : word.uk.length > 10 ? 'long-word' : ''}>{word.uk}</h2><p className="pronunciation">[ {word.pronunciation} ]</p>{word.abbreviation && <span className="term-abbreviation">{word.abbreviation}</span>}</div>}
                 </button>
                 <button className={`audio-button ${speaking ? 'speaking' : ''}`} onClick={speak} aria-label="播放乌克兰语发音"><Volume2 size={22} /></button>
                 <div className="card-bottom"><span className="word-status">{progress.known.includes(word.id) ? <><CheckCheck size={13} />已掌握</> : progress.review.includes(word.id) ? <><RotateCcw size={12} />待复习</> : '新单词'}</span><span><RotateCcw size={12} />{flipped ? '点击卡片返回正面' : '点击卡片查看释义'}</span><span className="card-side">{flipped ? '中' : 'УКР'}</span></div>
@@ -190,7 +203,7 @@ function App() {
       <footer><span><Heart size={13} />用一点热爱，学一门语言。</span><span className="footer-center">З любов’ю до української <span>·</span> 与乌克兰语慢慢相识</span><span className="local-save"><span />进度保存在本机</span></footer>
     </main>
 
-    <dialog ref={helpRef} className="help-dialog" onCancel={() => setHelpOpen(false)} onClose={() => { setHelpOpen(false); helpTriggerRef.current?.focus() }} onClick={e => { if (e.target === e.currentTarget) setHelpOpen(false) }}><div className="dialog-heading"><span className="dialog-icon"><Layers size={23} /></span><button className="icon-button" onClick={() => setHelpOpen(false)} aria-label="关闭帮助"><X size={20} /></button></div><h2>用自己的节奏，认识新单词。</h2><p>先看乌克兰语、回想意思，再翻面查看中文和例句。根据熟悉程度，标记「还需练习」或「我记住了」。</p><div className="shortcut-list"><span><kbd>Space</kbd>翻转闪卡</span><span><kbd><ArrowLeft size={13} /></kbd><kbd><ArrowRight size={13} /></kbd>切换单词</span><span><kbd>1</kbd>还需练习</span><span><kbd>2</kbd>我记住了</span><span><kbd>P</kbd>播放发音</span></div><div className="help-note"><Headphones size={19} /><p>发音需要设备安装乌克兰语语音包；拉丁字母转写仅作辅助，重音用尖音符标注。学习记录保存在当前浏览器，清除网站数据会同时删除记录。</p></div><button className="primary-button" onClick={() => setHelpOpen(false)}>开始学习<ArrowRight size={16} /></button></dialog>
+    <dialog ref={helpRef} className="help-dialog" onCancel={() => setHelpOpen(false)} onClose={() => { setHelpOpen(false); helpTriggerRef.current?.focus() }} onClick={e => { if (e.target === e.currentTarget) setHelpOpen(false) }}><div className="dialog-heading"><span className="dialog-icon"><Layers size={23} /></span><button className="icon-button" onClick={() => setHelpOpen(false)} aria-label="关闭帮助"><X size={20} /></button></div><h2>用自己的节奏，认识新单词。</h2><p>先看乌克兰语、回想意思，再翻面查看中文和例句。根据熟悉程度，标记「还需练习」或「我记住了」。默认学习 A2–B1 和行业词汇；可切换学习范围，原有 A1 收藏与进度仍保留。A2–B1 是学习分组参考，行业词不强行归入 CEFR 等级。</p><div className="shortcut-list"><span><kbd>Space</kbd>翻转闪卡</span><span><kbd><ArrowLeft size={13} /></kbd><kbd><ArrowRight size={13} /></kbd>切换单词</span><span><kbd>1</kbd>还需练习</span><span><kbd>2</kbd>我记住了</span><span><kbd>P</kbd>播放发音</span></div><div className="help-note"><Headphones size={19} /><p>发音需要设备安装乌克兰语语音包；拉丁字母转写仅作辅助，重音用尖音符标注。学习记录保存在当前浏览器，清除网站数据会同时删除记录。</p></div><button className="primary-button" onClick={() => setHelpOpen(false)}>开始学习<ArrowRight size={16} /></button></dialog>
     {toast && <div className="toast" role="status"><Check size={17} /><span>{toast}</span><button onClick={() => setToast('')} aria-label="关闭提示"><X size={14} /></button></div>}
   </>
 }
