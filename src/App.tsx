@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, BookOpen, Bookmark, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Flame, Headphones, Heart, Keyboard, Layers, RotateCcw, Search, Shuffle, Sparkles, Sprout, Volume2, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, BookOpen, Bookmark, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Flame, Headphones, Heart, Keyboard, Layers, LoaderCircle, RotateCcw, Search, Shuffle, Sparkles, Sprout, Volume2, X } from 'lucide-react'
 import { categories, levelOptions, matchesLevel, words } from './words'
 import type { Category, LevelFilter } from './words'
+import { usePronunciation } from './usePronunciation'
 
 type Mode = 'all' | 'saved' | 'review'
 type Progress = { known: string[]; review: string[]; saved: string[]; daily: { date: string; ids: string[] }; days: string[] }
@@ -29,7 +30,6 @@ function App() {
   const [order, setOrder] = useState(words.map(w => w.id))
   const [toast, setToast] = useState('')
   const [helpOpen, setHelpOpen] = useState(false)
-  const [speaking, setSpeaking] = useState(false)
   const [celebrated, setCelebrated] = useState(false)
   const helpRef = useRef<HTMLDialogElement>(null)
   const helpTriggerRef = useRef<HTMLButtonElement>(null)
@@ -44,6 +44,7 @@ function App() {
   ), [level, category, mode, query, order, progress.saved, progress.review])
   const currentIndex = filtered.length ? Math.min(index, filtered.length - 1) : 0
   const word = filtered[currentIndex]
+  const { autoRead, toggleAutoRead, speak, speaking, loadingVoice, needsGesture } = usePronunciation(word?.id, word?.uk, !!word && !celebrated && !helpOpen, setToast)
   const learnedInGroup = filtered.filter(w => progress.known.includes(w.id)).length
   const groupPercent = filtered.length ? Math.round(learnedInGroup / filtered.length * 100) : 0
   const saved = !!word && progress.saved.includes(word.id)
@@ -58,12 +59,7 @@ function App() {
     if (helpOpen) helpRef.current?.showModal()
     else if (helpRef.current?.open) helpRef.current.close()
   }, [helpOpen])
-  useEffect(() => {
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
-    setSpeaking(false)
-  }, [word?.id])
   useEffect(() => { roundReviewed.current.clear() }, [level, category, mode, query, order])
-  useEffect(() => { if ('speechSynthesis' in window) window.speechSynthesis.getVoices() }, [])
 
   const navigate = useCallback((direction: number) => {
     if (!filtered.length) return
@@ -71,23 +67,6 @@ function App() {
     setIndex((currentIndex + direction + filtered.length) % filtered.length)
     setCelebrated(false)
   }, [filtered.length, currentIndex])
-
-  const speak = useCallback(() => {
-    if (!word) return
-    if (!('speechSynthesis' in window)) { setToast('此浏览器不支持语音朗读，可参考卡片上的发音提示。'); return }
-    const synth = window.speechSynthesis
-    const voice = synth.getVoices().find(v => /^uk([_-]|$)/i.test(v.lang))
-    if (!voice) { setToast('当前设备没有乌克兰语语音包。请在系统语音设置中添加后重试。'); return }
-    synth.cancel()
-    const utterance = new SpeechSynthesisUtterance(word.uk)
-    utterance.lang = 'uk-UA'
-    utterance.voice = voice
-    utterance.rate = 0.8
-    utterance.onstart = () => setSpeaking(true)
-    utterance.onend = () => setSpeaking(false)
-    utterance.onerror = () => { setSpeaking(false); setToast('暂时无法播放发音，请稍后再试。') }
-    synth.speak(utterance)
-  }, [word])
 
   function toggleSaved() {
     if (!word) return
@@ -175,6 +154,7 @@ function App() {
 
         <div className="study-layout">
           <div className="study-main">
+            <div className="auto-read-row"><button className="auto-read-control" role="switch" aria-checked={autoRead} aria-label="自动朗读" onClick={toggleAutoRead}><Volume2 size={15} /><span>自动朗读</span><span className={`switch-track ${autoRead ? 'on' : ''}`} aria-hidden="true"><span /></span></button>{needsGesture ? <button className="audio-start-button" onClick={speak} disabled={!word || celebrated || helpOpen}>点此开启声音<ArrowRight size={12} /></button> : <span className="auto-read-hint">{autoRead ? '切换词卡，自动读出乌克兰语' : '开启后，切卡自动发音'}</span>}</div>
             <div className="deck-meta"><span><span className="live-dot" />{mode === 'saved' ? '收藏词库' : mode === 'review' ? '巩固记忆' : '实用词汇'}<span className="meta-divider">/</span>{word ? (word.level === '行业' ? '行业术语' : `${word.level} ${word.level === 'A1' ? '基础复习' : word.level === 'A2' ? '日常应用' : '交流表达'}`) : levelOptions.find(option => option.id === level)?.name}</span><button className="text-button" onClick={shuffle} disabled={!word}><Shuffle size={14} />随机顺序</button></div>
             <div className="card-stack">
               <div className="stack-sheet stack-one" /><div className="stack-sheet stack-two" />
@@ -183,7 +163,7 @@ function App() {
                 <button className="card-content" onClick={() => setFlipped(v => !v)} aria-label={flipped ? '翻回乌克兰语' : '翻卡查看中文释义'}>
                   {flipped ? <div className="word-back"><span className="card-eyebrow" lang="uk">{word.uk}</span><h2>{word.zh}</h2><span className="part-of-speech">{word.part}{word.abbreviation && ` · ${word.abbreviation}`}</span><div className="example"><p lang="uk">{word.example}</p><span>{word.translation}</span></div>{word.note && <p className="term-note">{word.note}</p>}</div> : <div className="word-front"><span className="card-eyebrow">УКРАЇНСЬКА · 乌克兰语</span><h2 lang="uk" className={word.uk.length > 30 ? 'phrase-word' : word.uk.length > 18 ? 'medium-word' : word.uk.length > 10 ? 'long-word' : ''}>{word.uk}</h2><p className="pronunciation">[ {word.pronunciation} ]</p>{word.abbreviation && <span className="term-abbreviation">{word.abbreviation}</span>}</div>}
                 </button>
-                <button className={`audio-button ${speaking ? 'speaking' : ''}`} onClick={speak} aria-label="播放乌克兰语发音"><Volume2 size={22} /></button>
+                <button className={`audio-button ${speaking ? 'speaking' : ''}`} onClick={speak} aria-label="播放乌克兰语发音" aria-busy={loadingVoice}>{loadingVoice ? <LoaderCircle size={22} className="voice-spinner" /> : <Volume2 size={22} />}</button>
                 <div className="card-bottom"><span className="word-status">{progress.known.includes(word.id) ? <><CheckCheck size={13} />已掌握</> : progress.review.includes(word.id) ? <><RotateCcw size={12} />待复习</> : '新单词'}</span><span><RotateCcw size={12} />{flipped ? '点击卡片返回正面' : '点击卡片查看释义'}</span><span className="card-side">{flipped ? '中' : 'УКР'}</span></div>
               </div> : <div className="flashcard empty-state"><span className="empty-icon">{mode === 'saved' ? <Bookmark size={31} /> : mode === 'review' ? <CheckCheck size={31} /> : <Search size={31} />}</span><h2>{query ? '还没找到这个单词' : mode === 'saved' ? '把喜欢的单词留在这里' : mode === 'review' ? '暂时没有待复习的单词' : '这个分类暂时没有单词'}</h2><p>{query ? '试试输入中文释义，或换一个关键词。' : mode === 'saved' ? '点击卡片右上角的收藏图标，下次就能轻松找到。' : '继续认识一些新单词吧，一点点积累。'}</p><button className="primary-button" onClick={resetFilters}>浏览全部词汇<ArrowRight size={16} /></button></div>}
             </div>
@@ -203,7 +183,7 @@ function App() {
       <footer><span><Heart size={13} />用一点热爱，学一门语言。</span><span className="footer-center">З любов’ю до української <span>·</span> 与乌克兰语慢慢相识</span><span className="local-save"><span />进度保存在本机</span></footer>
     </main>
 
-    <dialog ref={helpRef} className="help-dialog" onCancel={() => setHelpOpen(false)} onClose={() => { setHelpOpen(false); helpTriggerRef.current?.focus() }} onClick={e => { if (e.target === e.currentTarget) setHelpOpen(false) }}><div className="dialog-heading"><span className="dialog-icon"><Layers size={23} /></span><button className="icon-button" onClick={() => setHelpOpen(false)} aria-label="关闭帮助"><X size={20} /></button></div><h2>用自己的节奏，认识新单词。</h2><p>先看乌克兰语、回想意思，再翻面查看中文和例句。根据熟悉程度，标记「还需练习」或「我记住了」。默认学习 A2–B1 和行业词汇；可切换学习范围，原有 A1 收藏与进度仍保留。A2–B1 是学习分组参考，行业词不强行归入 CEFR 等级。</p><div className="shortcut-list"><span><kbd>Space</kbd>翻转闪卡</span><span><kbd><ArrowLeft size={13} /></kbd><kbd><ArrowRight size={13} /></kbd>切换单词</span><span><kbd>1</kbd>还需练习</span><span><kbd>2</kbd>我记住了</span><span><kbd>P</kbd>播放发音</span></div><div className="help-note"><Headphones size={19} /><p>发音需要设备安装乌克兰语语音包；拉丁字母转写仅作辅助，重音用尖音符标注。学习记录保存在当前浏览器，清除网站数据会同时删除记录。</p></div><button className="primary-button" onClick={() => setHelpOpen(false)}>开始学习<ArrowRight size={16} /></button></dialog>
+    <dialog ref={helpRef} className="help-dialog" onCancel={() => setHelpOpen(false)} onClose={() => { setHelpOpen(false); helpTriggerRef.current?.focus() }} onClick={e => { if (e.target === e.currentTarget) setHelpOpen(false) }}><div className="dialog-heading"><span className="dialog-icon"><Layers size={23} /></span><button className="icon-button" onClick={() => setHelpOpen(false)} aria-label="关闭帮助"><X size={20} /></button></div><h2>用自己的节奏，认识新单词。</h2><p>先看乌克兰语、回想意思，再翻面查看中文和例句。根据熟悉程度，标记「还需练习」或「我记住了」。默认学习 A2–B1 和行业词汇；可切换学习范围，原有 A1 收藏与进度仍保留。A2–B1 是学习分组参考，行业词不强行归入 CEFR 等级。</p><p>开启「自动朗读」后，切换词卡会自动播放乌克兰语。刷新后请点「点此开启声音」或喇叭恢复；翻面不会重复朗读。</p><div className="shortcut-list"><span><kbd>Space</kbd>翻转闪卡</span><span><kbd><ArrowLeft size={13} /></kbd><kbd><ArrowRight size={13} /></kbd>切换单词</span><span><kbd>1</kbd>还需练习</span><span><kbd>2</kbd>我记住了</span><span><kbd>P</kbd>播放发音</span></div><div className="help-note"><Headphones size={19} /><p>发音需要设备安装乌克兰语语音包；拉丁字母转写仅作辅助，重音用尖音符标注。学习记录保存在当前浏览器，清除网站数据会同时删除记录。</p></div><button className="primary-button" onClick={() => setHelpOpen(false)}>开始学习<ArrowRight size={16} /></button></dialog>
     {toast && <div className="toast" role="status"><Check size={17} /><span>{toast}</span><button onClick={() => setToast('')} aria-label="关闭提示"><X size={14} /></button></div>}
   </>
 }
